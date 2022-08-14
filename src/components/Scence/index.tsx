@@ -1,8 +1,6 @@
-import { useEffect, useRef } from 'react'
-import { WebGPUApplication } from '../../app/WebGPUApplication'
-import triangleVert from '../../app/shaders/triangle.vert.wgsl?raw'
-import redFrag from '../../app/shaders/red.frag.wgsl?raw'
+import { useEffect, useRef } from 'react' 
 import styles from './index.module.less'
+import { WebGLApplication } from '../../app/WebGLApplication'
 
 function Scence() {
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -22,20 +20,17 @@ function Scence() {
         }
         resize()
         run()
-
-
         window.addEventListener('resize', resize)
         return () => {
             window.removeEventListener('resize', resize)
         }
     }, [])
-    async function run() {
+    function run() {
         const canvas = document.querySelector('canvas')
         if (!canvas)
             throw new Error('No Canvas')
-        const app = new WebGPUApplication(canvas)
-        await app.initGPU();
-        await app.initPipeline(triangleVert, redFrag, 'triangle-list')
+        const app = new WebGLApplication(canvas)
+
         app.start()
 
     }
