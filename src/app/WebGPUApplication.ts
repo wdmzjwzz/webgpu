@@ -35,17 +35,17 @@ export class WebGPUApplication extends Application {
             device: this.device,
             format: this.format,
             // prevent chrome warning
-            alphaMode: 'premultiplied'
+            alphaMode: 'opaque'
         })
 
     }
 
-    async initPipeline(vert: string, frag: string, topology?: GPUPrimitiveTopology, layout: GPUPipelineLayout | "auto" = "auto") {
+    async initPipeline(vert: string, frag: string) {
         if (!this.device) {
             throw new Error("device is undefind");
         }
         const descriptor: GPURenderPipelineDescriptor = {
-            layout: layout,
+            layout: "auto",
             vertex: {
                 module: this.device.createShaderModule({
                     code: vert
@@ -53,7 +53,7 @@ export class WebGPUApplication extends Application {
                 entryPoint: 'main'
             },
             primitive: {
-                topology: topology // try point-list, line-list, line-strip, triangle-strip?
+                topology: 'triangle-list' // try point-list, line-list, line-strip, triangle-strip?
             },
             fragment: {
                 module: this.device.createShaderModule({
@@ -69,11 +69,8 @@ export class WebGPUApplication extends Application {
         }
         this.pipeline = await this.device.createRenderPipelineAsync(descriptor)
     }
-    /**
-     * @param intervalSec 上一帧到这一帧执行的时间
-     */
-    update() { }
-    render() {
+    public start(): void {
+        super.start()
         const commandEncoder = this.device!.createCommandEncoder()
         const view = this.context!.getCurrentTexture().createView()
         const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -89,10 +86,17 @@ export class WebGPUApplication extends Application {
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor)
         passEncoder.setPipeline(this.pipeline!)
         // 3 vertex form a triangle
-        passEncoder.draw(3)
-        passEncoder.end()
-        // webgpu run in a separate process, all the commands will be executed after submit
-        this.device!.queue.submit([commandEncoder.finish()])
+        passEncoder.draw(3, 1, 0, 0);
+        passEncoder.end();
+
+        this.device!.queue.submit([commandEncoder.finish()]);
+    }
+    /**
+     * @param intervalSec 上一帧到这一帧执行的时间
+     */
+    update() { }
+    render() {
+
     }
 
 

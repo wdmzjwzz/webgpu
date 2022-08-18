@@ -35,7 +35,7 @@ function Scence() {
             throw new Error('No Canvas')
         const app = new WebGPUApplication(canvas)
         await app.initGPU();
-        await app.initPipeline(triangleVert, redFrag, 'triangle-list')
+        await app.initPipeline(triangleVert, redFrag)
         app.start()
 
     }
