@@ -65,18 +65,33 @@ export class WebGPUApplication extends Application {
                         format: this.format
                     }
                 ]
+            },
+            multisample: {
+                count: 4,
             }
         }
         this.pipeline = await this.device.createRenderPipelineAsync(descriptor)
     }
-    public start(): void {
-        super.start()
+
+    createMSAATexture() {
+        let MSAATexture = this.device!.createTexture({
+            size: { width: this.canvas.width, height: this.canvas.height },
+            format: this.format,
+            sampleCount: 4,
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        });
+        return MSAATexture.createView();
+    }
+   
+    
+    render() {
         const commandEncoder = this.device!.createCommandEncoder()
-        const view = this.context!.getCurrentTexture().createView()
+        const view = this.createMSAATexture()
         const renderPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [
                 {
                     view: view,
+                    resolveTarget: this.context!.getCurrentTexture().createView(),
                     clearValue: { r: 0, g: 0, b: 0, a: 1.0 },
                     loadOp: 'clear', // clear/load
                     storeOp: 'store' // store/discard
@@ -94,10 +109,7 @@ export class WebGPUApplication extends Application {
     /**
      * @param intervalSec 上一帧到这一帧执行的时间
      */
-    update() { }
-    render() {
-
-    }
+    update() { } 
 
 
 }
