@@ -1,11 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WebGPUApplication } from '../../app/WebGPUApplication'
-import triangleVert from '../../app/shaders/triangle.vert.wgsl?raw'
-import redFrag from '../../app/shaders/red.frag.wgsl?raw'
 import styles from './index.module.less'
 
 function Scence() {
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
+    const [fps, setFps] = useState("0")
     const resize = () => {
         const canvas = canvasRef.current
         if (!canvas) {
@@ -22,8 +21,6 @@ function Scence() {
         }
         resize()
         run()
-
-
         window.addEventListener('resize', resize)
         return () => {
             window.removeEventListener('resize', resize)
@@ -34,13 +31,17 @@ function Scence() {
         if (!canvas)
             throw new Error('No Canvas')
         const app = new WebGPUApplication(canvas)
-        await app.initGPU();
-        await app.initPipeline(triangleVert, redFrag)
+        app.setTimer(() => {
+            setFps(app.fps)
+        },1000)
         app.start()
 
     }
     return (
-        <canvas className={styles.canvas} ref={canvasRef}></canvas>
+        <>
+            <span className={styles.FPS}>FPS：{fps}</span>
+            <canvas className={styles.canvas} ref={canvasRef}></canvas>
+        </>
     )
 }
 

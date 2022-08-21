@@ -1,5 +1,7 @@
 import { Application } from "./Application";
 
+import triangleVert from './shaders/triangle.vert.wgsl?raw'
+import redFrag from './shaders/red.frag.wgsl?raw'
 export class WebGPUApplication extends Application {
     constructor(public canvas: HTMLCanvasElement) {
         super()
@@ -8,108 +10,99 @@ export class WebGPUApplication extends Application {
     adapter: GPUAdapter | null = null
     context: GPUCanvasContext | null
     device: GPUDevice | null = null
-    pipeline: GPURenderPipeline | null = null
+    pipeline: GPURenderPipeline | null = null;
+    commandEncoder: GPUCommandEncoder | null = null
     format: any;
+    passEncoder: GPURenderPassEncoder | null = null
+    async start() {
+        super.start()
+        await this.initGPU();
+        const pipeline = this.device!.createRenderPipeline({
+            layout: 'auto',
+            vertex: {
+                module: this.device!.createShaderModule({
+                    code: triangleVert,
+                }),
+                entryPoint: 'main',
+            },
+            fragment: {
+                module: this.device!.createShaderModule({
+                    code: redFrag,
+                }),
+                entryPoint: 'main',
+                targets: [
+                    {
+                        format: this.format,
+                    },
+                ],
+            },
+            primitive: {
+                topology: 'triangle-list',
+            },
+            multisample: {
+                count: 4,
+            },
+        });
+        const commandEncoder = this.device!.createCommandEncoder();
+        const view = this.createTexture()!
 
+        const renderPassDescriptor: GPURenderPassDescriptor = {
+            colorAttachments: [
+                {
+                    view,
+                    resolveTarget: this.context!.getCurrentTexture().createView(),
+                    clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+                    loadOp: 'clear',
+                    storeOp: 'store',
+                },
+            ],
+        };
+
+        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+        passEncoder.setPipeline(pipeline);
+        passEncoder.draw(3, 1, 0, 0);
+        passEncoder.end();
+
+        this.device!.queue.submit([commandEncoder.finish()]);
+    }
+    render(): void {
+        
+    }
     async initGPU() {
         if (!navigator.gpu)
             throw new Error('Not Support WebGPU')
-        this.adapter = await navigator.gpu.requestAdapter({
-            powerPreference: 'high-performance'
-            // powerPreference: 'low-power'
-        })
+        this.adapter = await navigator.gpu.requestAdapter()
         if (!this.adapter)
             throw new Error('No Adapter Found')
 
         if (!this.context)
             throw new Error('getContext("webgpu") Error')
         this.device = await this.adapter.requestDevice()
+        this.format = navigator.gpu.getPreferredCanvasFormat()
 
-        this.format = navigator.gpu.getPreferredCanvasFormat ? navigator.gpu.getPreferredCanvasFormat() : this.context.getPreferredFormat(this.adapter)
+
         const devicePixelRatio = window.devicePixelRatio || 1
         this.canvas.width = this.canvas.clientWidth * devicePixelRatio
         this.canvas.height = this.canvas.clientHeight * devicePixelRatio
 
         this.context.configure({
-            // json specific format when key and value are the same
             device: this.device,
             format: this.format,
-            // prevent chrome warning
             alphaMode: 'opaque'
         })
 
     }
-
-    async initPipeline(vert: string, frag: string) {
+    createTexture() {
         if (!this.device) {
-            throw new Error("device is undefind");
+            return
         }
-        const descriptor: GPURenderPipelineDescriptor = {
-            layout: "auto",
-            vertex: {
-                module: this.device.createShaderModule({
-                    code: vert
-                }),
-                entryPoint: 'main'
-            },
-            primitive: {
-                topology: 'triangle-list' // try point-list, line-list, line-strip, triangle-strip?
-            },
-            fragment: {
-                module: this.device.createShaderModule({
-                    code: frag
-                }),
-                entryPoint: 'main',
-                targets: [
-                    {
-                        format: this.format
-                    }
-                ]
-            },
-            multisample: {
-                count: 4,
-            }
-        }
-        this.pipeline = await this.device.createRenderPipelineAsync(descriptor)
-    }
-
-    createMSAATexture() {
-        let MSAATexture = this.device!.createTexture({
-            size: { width: this.canvas.width, height: this.canvas.height },
-            format: this.format,
+        const texture = this.device.createTexture({
+            size: [this.canvas.width, this.canvas.height],
             sampleCount: 4,
-            usage: GPUTextureUsage.RENDER_ATTACHMENT
+            format: this.format,
+            usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
-        return MSAATexture.createView();
+        return texture.createView();
     }
-   
-    
-    render() {
-        const commandEncoder = this.device!.createCommandEncoder()
-        const view = this.createMSAATexture()
-        const renderPassDescriptor: GPURenderPassDescriptor = {
-            colorAttachments: [
-                {
-                    view: view,
-                    resolveTarget: this.context!.getCurrentTexture().createView(),
-                    clearValue: { r: 0, g: 0, b: 0, a: 1.0 },
-                    loadOp: 'clear', // clear/load
-                    storeOp: 'store' // store/discard
-                }
-            ]
-        }
-        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor)
-        passEncoder.setPipeline(this.pipeline!)
-        // 3 vertex form a triangle
-        passEncoder.draw(3, 1, 0, 0);
-        passEncoder.end();
-
-        this.device!.queue.submit([commandEncoder.finish()]);
-    }
-    /**
-     * @param intervalSec 上一帧到这一帧执行的时间
-     */
-    update() { } 
-
 
 }
