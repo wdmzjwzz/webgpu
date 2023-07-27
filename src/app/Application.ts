@@ -23,7 +23,7 @@ export class Application {
     }
 
     // 不停的周而复始运动
-    protected step(timeStamp: number): void { 
+    protected step(timeStamp: number): void {
         if (this._startTime === -1) this._startTime = timeStamp;
         if (this._lastTime === -1) this._lastTime = timeStamp;
 
@@ -42,9 +42,6 @@ export class Application {
         //记录上一次的时间戳
         this._lastTime = timeStamp;
 
-
-        // 先更新
-        this.update(intervalSec);
         // 后渲染
         this.render();
         // 递归调用，形成周而复始的前进
@@ -52,10 +49,7 @@ export class Application {
             this.step(elapsedMsec);
         });
     }
-    /**
-     * @param _intervalSec 上一帧到这一帧执行的时间
-     */
-    update(_intervalSec: number) { }
+
     render() { }
     // 停止动画循环
     public stop(): void {
